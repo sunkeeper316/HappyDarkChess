@@ -1,17 +1,135 @@
-# happy_dark_chess
+# HappyDarkChess 歡樂暗棋
 
-A new Flutter project.
+使用 Flutter 與 Flame 製作的台灣中國暗棋遊戲。目前支援玩家對電腦，以及兩位玩家在同一部裝置上輪流遊玩。
 
-## Getting Started
+## 目前功能
 
-This project is a starting point for a Flutter application.
+- 4 × 8 暗棋棋盤與完整 32 枚棋子
+- 每局開始自動隨機洗牌
+- 首次翻棋決定玩家一的陣營
+- 玩家對電腦模式與本機雙人模式
+- 翻棋、移動、吃子、回合切換與勝負判定
+- 顯示目前回合及紅黑雙方剩餘棋子數
+- Android、iOS、Web 與 macOS 平台專案
 
-A few resources to get you started if this is your first Flutter project:
+## 遊戲方式
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+1. 選擇「電腦」或「雙人」模式。
+2. 第一位玩家翻開任意棋子，翻出的顏色就是玩家一的陣營。
+3. 翻棋、移動或吃子都會使用一個回合。
+4. 點選自己的明棋，再點選合法目的地即可移動或吃子。
+5. 將對方棋子全部吃完即獲勝。
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 目前採用的暗棋規則
+
+### 棋子與大小
+
+| 階級 | 紅方 | 黑方 | 數量（每方） |
+| --- | --- | --- | ---: |
+| 7 | 帥 | 將 | 1 |
+| 6 | 仕 | 士 | 2 |
+| 5 | 相 | 象 | 2 |
+| 4 | 俥 | 車 | 2 |
+| 3 | 傌 | 馬 | 2 |
+| 2 | 炮 | 包 | 2 |
+| 1 | 兵 | 卒 | 5 |
+
+一般棋子只能吃掉同階或比自己低階的棋子，並有以下例外：
+
+- 兵／卒可以吃帥／將。
+- 帥／將不能吃兵／卒。
+- 炮／包的吃法不比較階級。
+
+### 移動
+
+- 已翻開的棋子才能移動。
+- 一般棋子一次只能向上、下、左、右移動一格，不能斜走。
+- 不能移動到己方棋子或尚未翻開的棋子上。
+- 炮／包移動到空格時，同樣只能移動相鄰一格。
+
+### 炮／包吃子
+
+炮與目標必須位於同一列或同一行，中間必須剛好隔著一枚棋子（明棋或暗棋皆可），才能吃掉目標。炮可以吃任何階級的敵方明棋。
+
+## 電腦如何下棋
+
+目前使用簡易規則式 AI，每個回合依照以下順序決定：
+
+1. 取得電腦陣營的所有合法移動。
+2. 如果有棋子可以吃，優先吃掉階級最高的目標。
+3. 如果不能吃且棋盤上仍有暗棋，約 50% 機率隨機翻一枚暗棋；完全沒有合法移動時一定翻棋。
+4. 其餘情況從合法移動中隨機選擇一步。
+
+因此電腦目前會遵守規則，也會優先吃較高階棋子，但不會預測後續盤面。它目前不會判斷：
+
+- 吃子後是否會立刻被反吃
+- 棋子之間的保護與交換價值
+- 炮架布局
+- 翻開某個位置的風險
+- 兩步以上的攻防變化
+
+## 修改規則後，電腦會不會知道？
+
+玩家與電腦共用 `canMove()` 與 `legalMoves()` 判定合法走法，因此修改以下規則後，電腦會自動遵守：
+
+- 移動方向與距離
+- 棋子能否吃某個目標
+- 棋子階級關係
+- 炮的合法吃法
+
+但電腦的策略不會自動理解新規則的戰術價值。例如修改棋子強弱、加入特殊技能、連續吃子、禁手或新的勝利條件時，還需要同步調整 `playComputerTurn()` 的決策與評分方式。
+
+## 專案結構
+
+```text
+lib/
+├── main.dart                       # Flutter 畫面、模式切換與狀態列
+└── game/
+    ├── dark_chess_game.dart        # Flame 棋盤、棋子繪製與點擊處理
+    └── dark_chess_model.dart       # 棋盤狀態、規則、勝負與電腦 AI
+test/
+└── dark_chess_model_test.dart      # 規則測試
+```
+
+重要方法：
+
+- `reset()`：建立棋子並洗牌。
+- `tap()`：處理玩家翻棋、選棋、移動與吃子。
+- `canMove()`：判斷單一步是否合法，是玩家與電腦共用的規則入口。
+- `legalMoves()`：列出指定陣營的所有合法走法。
+- `playComputerTurn()`：目前的電腦決策流程。
+- `_finishTurn()`：切換回合並判斷勝負。
+
+## 開發與執行
+
+需要先安裝 Flutter SDK，然後在專案根目錄執行：
+
+```bash
+flutter pub get
+flutter run
+```
+
+指定平台：
+
+```bash
+flutter run -d chrome
+flutter run -d macos
+```
+
+## 檢查與測試
+
+```bash
+flutter analyze
+flutter test
+```
+
+目前測試涵蓋開局棋子數量、首翻定色、兵／卒與將／帥的特殊吃法，以及炮的隔子吃法。
+
+## 後續可改進項目
+
+- 將規則、盤面狀態和電腦玩家拆成獨立模組
+- 加入盤面評分與 Minimax／Expectimax 搜尋
+- 加入無合法走法、重複局面與和棋規則
+- 增加音效、翻棋動畫及移動動畫
+- 加入難度選擇、對局紀錄與悔棋
+- 加入網路雙人對戰
