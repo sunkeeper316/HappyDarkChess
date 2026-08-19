@@ -53,6 +53,55 @@ class DarkChessModel {
       turnColor != null &&
       turnColor != playerOneColor;
 
+  Map<String, dynamic> toNetworkMap() => {
+    'board': board
+        .map(
+          (piece) => piece == null
+              ? null
+              : {
+                  'color': piece.color.name,
+                  'rank': piece.rank,
+                  'label': piece.label,
+                  'revealed': piece.revealed,
+                },
+        )
+        .toList(),
+    'playerOneColor': playerOneColor?.name,
+    'turnColor': turnColor?.name,
+    'selected': selected,
+    'gameOver': gameOver,
+    'message': snapshot.value.message,
+  };
+
+  void applyNetworkMap(Map<String, dynamic> data) {
+    final pieces = data['board'] as List<dynamic>;
+    for (var i = 0; i < board.length; i++) {
+      final value = pieces[i];
+      if (value == null) {
+        board[i] = null;
+      } else {
+        final map = value as Map<String, dynamic>;
+        board[i] = ChessPiece(
+          PieceColor.values.byName(map['color'] as String),
+          map['rank'] as int,
+          map['label'] as String,
+          revealed: map['revealed'] as bool,
+        );
+      }
+    }
+    final playerColor = data['playerOneColor'] as String?;
+    final currentTurn = data['turnColor'] as String?;
+    playerOneColor = playerColor == null
+        ? null
+        : PieceColor.values.byName(playerColor);
+    turnColor = currentTurn == null
+        ? null
+        : PieceColor.values.byName(currentTurn);
+    selected = data['selected'] as int?;
+    gameOver = data['gameOver'] as bool;
+    _publish(data['message'] as String);
+  }
+
   void reset() {
     final pieces = <ChessPiece>[];
     void add(PieceColor color, int rank, String label, int count) {

@@ -4,15 +4,21 @@ import 'package:flutter/material.dart' hide Image;
 import 'dark_chess_model.dart';
 
 class DarkChessGame extends FlameGame {
-  DarkChessGame(this.model);
+  DarkChessGame(this.model, {this.onCellTap});
   final DarkChessModel model;
+  final void Function(int index)? onCellTap;
   Rect boardRect = Rect.zero;
   double cellSize = 0;
   void handleTap(Offset point) {
     if (!boardRect.contains(point)) return;
     final col = ((point.dx - boardRect.left) / cellSize).floor();
     final row = ((point.dy - boardRect.top) / cellSize).floor();
-    final changed = model.tap(row * 4 + col);
+    final index = row * 4 + col;
+    if (onCellTap != null) {
+      onCellTap!(index);
+      return;
+    }
+    final changed = model.tap(index);
     if (changed && model.isComputerTurn && !model.gameOver) {
       model.aiThinking = true;
       Future<void>.delayed(const Duration(milliseconds: 650), () {

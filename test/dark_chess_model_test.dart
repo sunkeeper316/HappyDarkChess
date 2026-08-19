@@ -38,4 +38,15 @@ void main() {
     game.board[2] = ChessPiece(PieceColor.black, 1, '卒');
     expect(game.canMove(0, 3), isFalse);
   });
+
+  test('network state can rebuild the same board', () {
+    final host = DarkChessModel(mode: GameMode.twoPlayers, random: Random(5));
+    host.tap(0);
+    final client = DarkChessModel(mode: GameMode.twoPlayers, random: Random(6));
+    client.applyNetworkMap(host.toNetworkMap());
+    expect(client.board[0]!.label, host.board[0]!.label);
+    expect(client.board[0]!.revealed, isTrue);
+    expect(client.playerOneColor, host.playerOneColor);
+    expect(client.turnColor, host.turnColor);
+  });
 }

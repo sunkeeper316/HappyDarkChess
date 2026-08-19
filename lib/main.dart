@@ -2,6 +2,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'game/dark_chess_game.dart';
 import 'game/dark_chess_model.dart';
+import 'network/lan_lobby_page.dart';
 
 void main() => runApp(const HappyDarkChessApp());
 
@@ -115,6 +116,17 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const LanLobbyPage()),
+                    ),
+                    icon: const Icon(Icons.wifi),
+                    label: const Text('Wi-Fi 連線對戰'),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     const Expanded(
