@@ -92,10 +92,17 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(
-                  Icons.casino_outlined,
-                  size: 72,
-                  color: Color(0xFFFFB36A),
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.asset(
+                      'assets/images/super-dark-chess-app-icon.png',
+                      width: 96,
+                      height: 96,
+                      fit: BoxFit.cover,
+                      semanticLabel: '超級暗棋圖示',
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 const Text(

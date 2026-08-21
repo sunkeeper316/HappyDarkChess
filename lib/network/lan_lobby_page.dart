@@ -1,5 +1,7 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../game/dark_chess_game.dart';
 import '../game/dark_chess_model.dart';
 import 'lan_connection.dart';
@@ -89,6 +91,15 @@ class _LanLobbyPageState extends State<LanLobbyPage> {
     }
   }
 
+  Future<void> _scanQrCode() async {
+    final address = await Navigator.of(
+      context,
+    ).push<String>(MaterialPageRoute(builder: (_) => const _QrScannerPage()));
+    if (address == null || !mounted) return;
+    _addressController.text = address;
+    await _join();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Wi-Fi 對戰')),
@@ -137,6 +148,12 @@ class _LanLobbyPageState extends State<LanLobbyPage> {
                 ),
               ),
               const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _scanQrCode,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text('掃描房主 QR Code'),
+              ),
+              const SizedBox(height: 10),
               FilledButton.tonalIcon(
                 onPressed: _busy ? null : _join,
                 icon: const Icon(Icons.login),
@@ -164,6 +181,97 @@ class _LanLobbyPageState extends State<LanLobbyPage> {
       ),
     ),
   );
+}
+
+class _QrScannerPage extends StatefulWidget {
+  const _QrScannerPage();
+
+  @override
+  State<_QrScannerPage> createState() => _QrScannerPageState();
+}
+
+class _QrScannerPageState extends State<_QrScannerPage> {
+  final MobileScannerController _controller = MobileScannerController();
+  bool _found = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _detect(BarcodeCapture capture) {
+    if (_found) return;
+    for (final barcode in capture.barcodes) {
+      final value = barcode.rawValue;
+      if (value == null) continue;
+      final address = _parseJoinQr(value);
+      if (address != null) {
+        _found = true;
+        Navigator.of(context).pop(address);
+        return;
+      }
+    }
+    if (mounted) setState(() => _error = '這不是「超級暗棋」的房間 QR Code');
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('掃描房間 QR Code')),
+    body: Stack(
+      fit: StackFit.expand,
+      children: [
+        MobileScanner(controller: _controller, onDetect: _detect),
+        Center(
+          child: Container(
+            width: 250,
+            height: 250,
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFFFD54F), width: 4),
+              borderRadius: BorderRadius.circular(24),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 24,
+          right: 24,
+          bottom: 36,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xDD20150F),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Text(
+              _error ?? '將房主畫面的 QR Code 對準框內',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: _error == null ? Colors.white : Colors.orangeAccent,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+String _joinQrData(String address) => Uri(
+  scheme: 'super-dark-chess',
+  host: 'join',
+  queryParameters: {'host': address},
+).toString();
+
+String? _parseJoinQr(String value) {
+  final uri = Uri.tryParse(value);
+  if (uri == null || uri.scheme != 'super-dark-chess' || uri.host != 'join') {
+    return null;
+  }
+  final address = uri.queryParameters['host']?.trim();
+  if (address == null || !RegExp(r'^.+:\d+$').hasMatch(address)) return null;
+  return address;
 }
 
 class LanGamePage extends StatefulWidget {
@@ -303,6 +411,21 @@ class _LanGamePageState extends State<LanGamePage> {
                             color: Color(0xFFFFB36A),
                           ),
                         ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: QrImageView(
+                            data: _joinQrData(widget.address!),
+                            size: 190,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        const Text('請對手掃描 QR Code，即可自動連線'),
                       ],
                     ),
                   ),

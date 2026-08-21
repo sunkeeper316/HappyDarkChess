@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>用來尋找並連接同一個 Wi-Fi 上的暗棋對手。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>用來掃描房主顯示的「超級暗棋」連線 QR Code。</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
