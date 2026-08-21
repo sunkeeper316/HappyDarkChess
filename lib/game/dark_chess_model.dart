@@ -297,7 +297,7 @@ class DarkChessModel {
     if (superPiece && moving.rank == 4) {
       if (fr != tr && fc != tc) return false;
       final screens = _screensBetween(from, to, straightOnly: true);
-      return target == null ? screens == 0 : screens <= 1;
+      return screens == 0;
     }
     if (superPiece &&
         moving.rank == 3 &&

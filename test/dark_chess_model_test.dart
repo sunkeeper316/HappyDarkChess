@@ -150,14 +150,16 @@ void main() {
       expect(game.canMove(0, 10), isTrue);
     });
 
-    test('rook travels freely and cannon-jumps for captures', () {
+    test('rook travels and captures in a clear straight line', () {
       final game = superGame(4);
       game.board[0] = ChessPiece(PieceColor.red, 4, '俥', revealed: true);
       expect(game.canMove(0, 12), isTrue);
       game.board[12] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
       expect(game.canMove(0, 12), isTrue);
       game.board[4] = ChessPiece(PieceColor.red, 1, '兵');
-      expect(game.canMove(0, 12), isTrue);
+      expect(game.canMove(0, 12), isFalse);
+      game.board[4]!.revealed = true;
+      expect(game.canMove(0, 12), isFalse);
     });
 
     test('horse moves diagonally but cannot capture a general', () {
