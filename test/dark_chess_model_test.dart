@@ -17,6 +17,24 @@ void main() {
     expect(game.board.first!.revealed, isTrue);
     expect(game.turnColor, isNot(color));
   });
+  test('tapping a hidden piece while selected only cancels selection', () {
+    final game = DarkChessModel(mode: GameMode.twoPlayers, random: Random(11));
+    game.board.fillRange(0, 32, null);
+    game.board[0] = ChessPiece(PieceColor.red, 4, '俥', revealed: true);
+    game.board[1] = ChessPiece(PieceColor.black, 3, '馬');
+    game.turnColor = PieceColor.red;
+    game.selected = 0;
+
+    game.tap(1);
+
+    expect(game.selected, isNull);
+    expect(game.board[1]!.revealed, isFalse);
+    expect(game.turnColor, PieceColor.red);
+    expect(game.snapshot.value.message, contains('只有超級炮／包可以'));
+    game.tap(1);
+    expect(game.board[1]!.revealed, isTrue);
+    expect(game.turnColor, PieceColor.black);
+  });
   test('soldier captures general but general cannot capture soldier', () {
     final game = DarkChessModel(mode: GameMode.twoPlayers, random: Random(3));
     game.board.fillRange(0, 32, null);
@@ -157,9 +175,32 @@ void main() {
       game.board[1] = ChessPiece(PieceColor.black, 1, '卒');
       game.board[3] = ChessPiece(PieceColor.red, 5, '相');
       expect(game.canMove(0, 3), isTrue);
+      game.selected = 0;
+      game.tap(3);
+      expect(game.board[3]!.label, '炮');
+      expect(game.capturedPieces.single.label, '相');
+
+      game.board[0] = game.board[3];
+      game.board[3] = ChessPiece(PieceColor.red, 5, '相');
+      game.turnColor = PieceColor.red;
       game.board[2] = ChessPiece(PieceColor.black, 3, '馬', revealed: true);
       expect(game.canMove(0, 3), isFalse);
     });
+
+    test(
+      'cannon jumps any number of hidden pieces to capture a revealed one',
+      () {
+        final game = superGame(2);
+        game.board[0] = ChessPiece(PieceColor.red, 2, '炮', revealed: true);
+        game.board[1] = ChessPiece(PieceColor.red, 1, '兵');
+        game.board[2] = ChessPiece(PieceColor.black, 5, '象');
+        game.board[3] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
+        expect(game.canMove(0, 3), isTrue);
+
+        game.board[2]!.revealed = true;
+        expect(game.canMove(0, 3), isFalse);
+      },
+    );
 
     test('soldier captures every rank except advisor', () {
       final game = superGame(1);
@@ -169,5 +210,32 @@ void main() {
       game.board[1] = ChessPiece(PieceColor.black, 6, '士', revealed: true);
       expect(game.canMove(0, 1), isFalse);
     });
+  });
+
+  test('player super choices follow players instead of colours', () {
+    final game = DarkChessModel(
+      mode: GameMode.twoPlayers,
+      ruleMode: RuleMode.playerSuperPieces,
+      playerOneSuperRank: 3,
+      playerTwoSuperRank: 5,
+      random: Random(12),
+    );
+    game.playerOneColor = PieceColor.black;
+
+    expect(game.isSuper(ChessPiece(PieceColor.black, 3, '馬')), isTrue);
+    expect(game.isSuper(ChessPiece(PieceColor.red, 5, '相')), isTrue);
+    expect(game.isSuper(ChessPiece(PieceColor.red, 3, '傌')), isFalse);
+  });
+
+  test('computer chooses its own player super rank', () {
+    final game = DarkChessModel(
+      mode: GameMode.computer,
+      ruleMode: RuleMode.playerSuperPieces,
+      playerOneSuperRank: 2,
+      playerTwoSuperRank: 99,
+      random: Random(13),
+    );
+    expect(game.playerOneSuperRank, 2);
+    expect(game.playerTwoSuperRank, inInclusiveRange(1, 7));
   });
 }

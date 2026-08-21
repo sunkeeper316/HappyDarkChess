@@ -5,7 +5,7 @@ enum PieceColor { red, black }
 
 enum GameMode { computer, twoPlayers }
 
-enum RuleMode { classic, superPieces }
+enum RuleMode { classic, superPieces, playerSuperPieces }
 
 class ChessPiece {
   ChessPiece(this.color, this.rank, this.label, {this.revealed = false});
@@ -40,14 +40,21 @@ class DarkChessModel {
     this.ruleMode = RuleMode.classic,
     this.redSuperRank = 7,
     this.blackSuperRank = 7,
+    this.playerOneSuperRank = 7,
+    this.playerTwoSuperRank = 7,
     Random? random,
   }) : _random = random ?? Random() {
+    if (ruleMode == RuleMode.playerSuperPieces && mode == GameMode.computer) {
+      playerTwoSuperRank = _random.nextInt(7) + 1;
+    }
     reset();
   }
   final GameMode mode;
   RuleMode ruleMode;
   int redSuperRank;
   int blackSuperRank;
+  int playerOneSuperRank;
+  int playerTwoSuperRank;
   final Random _random;
   final List<ChessPiece?> board = List.filled(32, null);
   final List<ChessPiece> capturedPieces = [];
@@ -65,10 +72,19 @@ class DarkChessModel {
       turnColor != null &&
       turnColor != playerOneColor;
 
-  bool isSuper(ChessPiece piece) =>
-      ruleMode == RuleMode.superPieces &&
-      piece.rank ==
+  bool isSuper(ChessPiece piece) {
+    if (ruleMode == RuleMode.superPieces) {
+      return piece.rank ==
           (piece.color == PieceColor.red ? redSuperRank : blackSuperRank);
+    }
+    if (ruleMode == RuleMode.playerSuperPieces && playerOneColor != null) {
+      return piece.rank ==
+          (piece.color == playerOneColor
+              ? playerOneSuperRank
+              : playerTwoSuperRank);
+    }
+    return false;
+  }
 
   Map<String, dynamic> toNetworkMap() => {
     'board': board
@@ -100,6 +116,8 @@ class DarkChessModel {
     'ruleMode': ruleMode.name,
     'redSuperRank': redSuperRank,
     'blackSuperRank': blackSuperRank,
+    'playerOneSuperRank': playerOneSuperRank,
+    'playerTwoSuperRank': playerTwoSuperRank,
     'comboPiece': comboPiece,
     'message': snapshot.value.message,
   };
@@ -149,6 +167,10 @@ class DarkChessModel {
     }
     redSuperRank = data['redSuperRank'] as int? ?? redSuperRank;
     blackSuperRank = data['blackSuperRank'] as int? ?? blackSuperRank;
+    playerOneSuperRank =
+        data['playerOneSuperRank'] as int? ?? playerOneSuperRank;
+    playerTwoSuperRank =
+        data['playerTwoSuperRank'] as int? ?? playerTwoSuperRank;
     comboPiece = data['comboPiece'] as int?;
     _publish(data['message'] as String);
   }
@@ -203,6 +225,16 @@ class DarkChessModel {
       _publish('${_colorName(turnColor)}方：仕／士可再吃一枚棋子');
       return true;
     }
+    if (selected != null && piece != null && !piece.revealed) {
+      if (canMove(selected!, index)) {
+        _performMove(selected!, index);
+        return true;
+      }
+      final reason = _hiddenTargetCancelReason(selected!, index);
+      selected = null;
+      _publish('${_colorName(turnColor)}方：$reason；已取消選取');
+      return true;
+    }
     if (piece != null && !piece.revealed) {
       piece.revealed = true;
       turnColor ??= piece.color;
@@ -236,15 +268,20 @@ class DarkChessModel {
     final distance = (fr - tr).abs() + (fc - tc).abs();
     final superPiece = isSuper(moving);
 
-    // Super cannon may destroy any face-down piece before the first revealed
-    // blocker, including one of its own colour.
-    if (superPiece && moving.rank == 2 && target != null && !target.revealed) {
+    // Super cannon can jump across any number of face-down pieces. It may
+    // destroy a face-down target regardless of colour, or capture an enemy
+    // revealed target after at least one face-down screen. A revealed piece
+    // anywhere in the path blocks the shot.
+    if (superPiece && moving.rank == 2 && target != null) {
       if (fr != tr && fc != tc) return false;
+      var hiddenScreens = 0;
       for (final index in _between(from, to)) {
         final screen = board[index];
         if (screen != null && screen.revealed) return false;
+        if (screen != null) hiddenScreens++;
       }
-      return true;
+      if (!target.revealed) return true;
+      return hiddenScreens > 0 && target.color != moving.color;
     }
     if (target != null && (!target.revealed || target.color == moving.color)) {
       return false;
@@ -278,6 +315,27 @@ class DarkChessModel {
     if (moving.rank == 1 && target.rank == 7) return true;
     if (moving.rank == 7 && target.rank == 1) return false;
     return moving.rank >= target.rank;
+  }
+
+  String _hiddenTargetCancelReason(int from, int to) {
+    final moving = board[from];
+    if (moving == null || !isSuper(moving) || moving.rank != 2) {
+      return '暗棋不能直接吃，只有超級炮／包可以';
+    }
+    final fr = from ~/ 4;
+    final fc = from % 4;
+    final tr = to ~/ 4;
+    final tc = to % 4;
+    if (fr != tr && fc != tc) {
+      return '超級炮／包只能攻擊同一行或同一列';
+    }
+    if (_between(from, to).any((index) {
+      final piece = board[index];
+      return piece != null && piece.revealed;
+    })) {
+      return '路徑上有明棋阻擋，不能跳過';
+    }
+    return '這不是合法的超級炮／包目標';
   }
 
   Iterable<int> _between(int from, int to) sync* {

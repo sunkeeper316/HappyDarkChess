@@ -35,6 +35,17 @@ class _HomeScreenState extends State<HomeScreen> {
   RuleMode ruleMode = RuleMode.classic;
   int redSuperRank = 7;
   int blackSuperRank = 7;
+  int playerOneSuperRank = 7;
+  int playerTwoSuperRank = 7;
+  static const _pieceNames = <int, String>{
+    7: '帥／將',
+    6: '仕／士',
+    5: '相／象',
+    4: '俥／車',
+    3: '傌／馬',
+    2: '炮／包',
+    1: '兵／卒',
+  };
 
   void _start(GameMode mode) {
     Navigator.of(context).push(
@@ -44,6 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ruleMode: ruleMode,
           redSuperRank: redSuperRank,
           blackSuperRank: blackSuperRank,
+          playerOneSuperRank: playerOneSuperRank,
+          playerTwoSuperRank: playerTwoSuperRank,
         ),
       ),
     );
@@ -56,6 +69,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ruleMode: ruleMode,
           redSuperRank: redSuperRank,
           blackSuperRank: blackSuperRank,
+          playerOneSuperRank: playerOneSuperRank,
+          playerTwoSuperRank: playerTwoSuperRank,
         ),
       ),
     );
@@ -136,7 +151,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ButtonSegment(
                             value: RuleMode.superPieces,
                             icon: Icon(Icons.bolt),
-                            label: Text('超級兵'),
+                            label: Text('紅黑指定'),
+                          ),
+                          ButtonSegment(
+                            value: RuleMode.playerSuperPieces,
+                            icon: Icon(Icons.person_outline),
+                            label: Text('玩家指定'),
                           ),
                         ],
                         selected: {ruleMode},
@@ -165,6 +185,45 @@ class _HomeScreenState extends State<HomeScreen> {
                               names: _GameScreenState._blackNames,
                               onChanged: (value) => setState(() {
                                 blackSuperRank = value;
+                              }),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => showDialog<void>(
+                                context: context,
+                                builder: (_) => const _SuperPieceHelpDialog(),
+                              ),
+                              icon: const Icon(Icons.help_outline),
+                              label: const Text('能力說明'),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (ruleMode == RuleMode.playerSuperPieces) ...[
+                        const SizedBox(height: 10),
+                        const Text(
+                          '能力綁定玩家，不受第一次翻到紅方或黑方影響。電腦對戰時 AI 會自行選擇。',
+                          style: TextStyle(color: Color(0xFFCDBDB2)),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 18,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            _SuperPicker(
+                              colorName: '玩家一',
+                              value: playerOneSuperRank,
+                              names: _pieceNames,
+                              onChanged: (value) => setState(() {
+                                playerOneSuperRank = value;
+                              }),
+                            ),
+                            _SuperPicker(
+                              colorName: '玩家二（本機雙人）',
+                              value: playerTwoSuperRank,
+                              names: _pieceNames,
+                              onChanged: (value) => setState(() {
+                                playerTwoSuperRank = value;
                               }),
                             ),
                             TextButton.icon(
@@ -246,11 +305,15 @@ class GameScreen extends StatefulWidget {
     required this.ruleMode,
     required this.redSuperRank,
     required this.blackSuperRank,
+    required this.playerOneSuperRank,
+    required this.playerTwoSuperRank,
   });
   final GameMode mode;
   final RuleMode ruleMode;
   final int redSuperRank;
   final int blackSuperRank;
+  final int playerOneSuperRank;
+  final int playerTwoSuperRank;
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
@@ -288,6 +351,8 @@ class _GameScreenState extends State<GameScreen> {
       ruleMode: widget.ruleMode,
       redSuperRank: widget.redSuperRank,
       blackSuperRank: widget.blackSuperRank,
+      playerOneSuperRank: widget.playerOneSuperRank,
+      playerTwoSuperRank: widget.playerTwoSuperRank,
     );
     game = DarkChessGame(model);
   }
@@ -299,7 +364,7 @@ class _GameScreenState extends State<GameScreen> {
     appBar: AppBar(
       title: Text(widget.mode == GameMode.computer ? '電腦對戰' : '本機雙人'),
       actions: [
-        if (widget.ruleMode == RuleMode.superPieces)
+        if (widget.ruleMode != RuleMode.classic)
           IconButton(
             tooltip: '超級兵能力說明',
             onPressed: _showSuperPieceHelp,
@@ -338,7 +403,7 @@ class _GameScreenState extends State<GameScreen> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  widget.ruleMode == RuleMode.superPieces
+                  widget.ruleMode != RuleMode.classic
                       ? '金框棋子擁有超級能力'
                       : '點棋背翻棋；點己方棋子後再點目的地',
                   style: const TextStyle(color: Color(0xFFCDBDB2)),
@@ -368,7 +433,7 @@ class _SuperPieceHelpDialog extends StatelessWidget {
     ('相／象', '成為斜線炮，可以沿斜線隔一枚棋子吃任意敵方明棋。'),
     ('俥／車', '像象棋的車一樣沿直線任意移動或吃子；隔一枚棋子也能吃任意敵方明棋。'),
     ('傌／馬', '可以斜走一格，也能吃帥／將以外的任意敵方明棋。'),
-    ('炮／包', '可以沿直線吃暗棋，不分敵我；暗棋不會阻擋路徑，但遇到明棋就不能繼續。'),
+    ('炮／包', '可沿直線跳過任意數量的暗棋，並吃掉暗棋後方的敵方明棋；路徑中的明棋會阻擋。也能直接吃暗棋，不分敵我。'),
     ('兵／卒', '可以吃仕／士以外的任何敵方明棋，但仍能被其他棋子正常吃掉。'),
   ];
 
@@ -384,7 +449,7 @@ class _SuperPieceHelpDialog extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '紅黑雙方各選一種棋種，該方所有同類棋子都會獲得超級能力。翻開後會顯示金色外框與閃電標記。',
+              '超級棋種可以依紅黑陣營指定，也可以綁定玩家、不受首翻顏色影響。該方所有同類棋子都會獲得能力，翻開後顯示金框與閃電標記。',
               style: TextStyle(color: Color(0xFFD2BEB0)),
             ),
             const SizedBox(height: 16),

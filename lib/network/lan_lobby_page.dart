@@ -10,10 +10,14 @@ class LanLobbyPage extends StatefulWidget {
     this.ruleMode = RuleMode.classic,
     this.redSuperRank = 7,
     this.blackSuperRank = 7,
+    this.playerOneSuperRank = 7,
+    this.playerTwoSuperRank = 7,
   });
   final RuleMode ruleMode;
   final int redSuperRank;
   final int blackSuperRank;
+  final int playerOneSuperRank;
+  final int playerTwoSuperRank;
   @override
   State<LanLobbyPage> createState() => _LanLobbyPageState();
 }
@@ -46,6 +50,8 @@ class _LanLobbyPageState extends State<LanLobbyPage> {
             ruleMode: widget.ruleMode,
             redSuperRank: widget.redSuperRank,
             blackSuperRank: widget.blackSuperRank,
+            playerOneSuperRank: widget.playerOneSuperRank,
+            playerTwoSuperRank: widget.playerTwoSuperRank,
           ),
         ),
       );
@@ -168,6 +174,8 @@ class LanGamePage extends StatefulWidget {
     required this.ruleMode,
     required this.redSuperRank,
     required this.blackSuperRank,
+    required this.playerOneSuperRank,
+    required this.playerTwoSuperRank,
   }) : _client = null,
        isHost = true;
   const LanGamePage.client(this._client, {super.key})
@@ -176,6 +184,8 @@ class LanGamePage extends StatefulWidget {
       ruleMode = RuleMode.classic,
       redSuperRank = 7,
       blackSuperRank = 7,
+      playerOneSuperRank = 7,
+      playerTwoSuperRank = 7,
       isHost = false;
   final LanHost? _host;
   final LanClient? _client;
@@ -184,6 +194,8 @@ class LanGamePage extends StatefulWidget {
   final RuleMode ruleMode;
   final int redSuperRank;
   final int blackSuperRank;
+  final int playerOneSuperRank;
+  final int playerTwoSuperRank;
   @override
   State<LanGamePage> createState() => _LanGamePageState();
 }
@@ -201,6 +213,8 @@ class _LanGamePageState extends State<LanGamePage> {
       ruleMode: widget.ruleMode,
       redSuperRank: widget.redSuperRank,
       blackSuperRank: widget.blackSuperRank,
+      playerOneSuperRank: widget.playerOneSuperRank,
+      playerTwoSuperRank: widget.playerTwoSuperRank,
     );
     game = DarkChessGame(model, onCellTap: _tap);
     if (widget.isHost) {
