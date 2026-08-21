@@ -148,10 +148,13 @@ void main() {
       expect(game.board[7]!.label, '仕');
     });
 
-    test('elephant cannon-jumps diagonally', () {
+    test('elephant jumps exactly two diagonal cells', () {
       final game = superGame(5);
       game.board[0] = ChessPiece(PieceColor.red, 5, '相', revealed: true);
-      game.board[5] = ChessPiece(PieceColor.red, 1, '兵');
+      expect(game.canMove(0, 10), isTrue);
+      expect(game.canMove(0, 5), isFalse);
+      expect(game.canMove(0, 15), isFalse);
+      game.board[5] = ChessPiece(PieceColor.red, 1, '兵', revealed: true);
       game.board[10] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
       expect(game.canMove(0, 10), isTrue);
 
@@ -167,6 +170,11 @@ void main() {
       expect(game.canMove(0, 12), isTrue);
       game.board[12] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
       expect(game.canMove(0, 12), isTrue);
+      game.board[1] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
+      expect(game.canMove(0, 1), isFalse);
+      game.board[1] = ChessPiece(PieceColor.black, 3, '馬', revealed: true);
+      expect(game.canMove(0, 1), isTrue);
+      game.board[1] = null;
       game.board[4] = ChessPiece(PieceColor.red, 1, '兵');
       expect(game.canMove(0, 12), isFalse);
       game.board[4]!.revealed = true;

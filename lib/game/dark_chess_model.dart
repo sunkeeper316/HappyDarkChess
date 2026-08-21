@@ -290,15 +290,16 @@ class DarkChessModel {
     if (superPiece && moving.rank == 7 && target != null) {
       if (_screensBetween(from, to, straightOnly: true) == 1) return true;
     }
-    if (superPiece && moving.rank == 5 && target != null) {
-      if ((fr - tr).abs() == (fc - tc).abs()) {
-        return _screensBetween(from, to) == 1;
+    if (superPiece && moving.rank == 5) {
+      if ((fr - tr).abs() == 2 && (fc - tc).abs() == 2) {
+        return true;
       }
     }
     if (superPiece && moving.rank == 4) {
       if (fr != tr && fc != tc) return false;
       final screens = _screensBetween(from, to, straightOnly: true);
-      return screens == 0;
+      if (screens != 0) return false;
+      if (distance > 1) return true;
     }
     if (superPiece &&
         moving.rank == 3 &&
