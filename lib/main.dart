@@ -1,10 +1,15 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'game/dark_chess_game.dart';
 import 'game/dark_chess_model.dart';
 import 'network/lan_lobby_page.dart';
 
-void main() => runApp(const HappyDarkChessApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  runApp(const HappyDarkChessApp());
+}
 
 class HappyDarkChessApp extends StatelessWidget {
   const HappyDarkChessApp({super.key});
@@ -495,9 +500,9 @@ class _SuperPieceHelpDialog extends StatelessWidget {
   const _SuperPieceHelpDialog();
 
   static const _abilities = <(String, String)>[
-    ('帥／將', '獲得炮的跳吃能力；直線隔一枚棋子時，可以吃兵／卒。'),
+    ('帥／將', '獲得炮的跳吃能力，直線隔一枚棋子可吃任意敵方明棋；相鄰吃子仍使用原規則，不能直接吃兵／卒。'),
     ('仕／士', '第一次吃子後，同一枚仕／士可以立刻再吃一枚；若沒有可吃的目標就換手。'),
-    ('相／象', '成為斜線炮，可以沿斜線隔一枚棋子吃任意敵方明棋。'),
+    ('相／象', '保留原本上下左右一格的移動與吃子；額外成為斜線炮，可沿斜線隔一枚棋子吃任意敵方明棋。'),
     ('俥／車', '像象棋的車一樣沿直線任意移動或吃任意敵方明棋；路徑中有暗棋或明棋都不能越過。'),
     ('傌／馬', '可以斜走一格，也能吃帥／將以外的任意敵方明棋。'),
     ('炮／包', '可沿直線跳過任意數量的暗棋，並吃掉暗棋後方的敵方明棋；路徑中的明棋會阻擋。也能直接吃暗棋，不分敵我。'),

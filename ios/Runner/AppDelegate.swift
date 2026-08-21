@@ -1,6 +1,17 @@
 import Flutter
 import UIKit
 
+class PortraitFlutterViewController: FlutterViewController {
+  override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+    return .portrait
+  }
+
+  @available(iOS 26.0, *)
+  override var prefersInterfaceOrientationLocked: Bool {
+    return true
+  }
+}
+
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   override func application(

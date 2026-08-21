@@ -120,12 +120,18 @@ void main() {
       return game;
     }
 
-    test('general cannon-jumps to capture a soldier', () {
+    test('general cannon-jumps to capture any revealed enemy', () {
       final game = superGame(7);
       game.board[0] = ChessPiece(PieceColor.red, 7, '帥', revealed: true);
       game.board[1] = ChessPiece(PieceColor.red, 3, '傌', revealed: true);
-      game.board[3] = ChessPiece(PieceColor.black, 1, '卒', revealed: true);
+      game.board[3] = ChessPiece(PieceColor.black, 6, '士', revealed: true);
       expect(game.canMove(0, 3), isTrue);
+      game.board[1] = null;
+      game.board[3] = null;
+      game.board[1] = ChessPiece(PieceColor.black, 1, '卒', revealed: true);
+      expect(game.canMove(0, 1), isFalse);
+      game.board[1] = ChessPiece(PieceColor.black, 6, '士', revealed: true);
+      expect(game.canMove(0, 1), isTrue);
     });
 
     test('advisor captures twice with the same piece', () {
@@ -148,6 +154,11 @@ void main() {
       game.board[5] = ChessPiece(PieceColor.red, 1, '兵');
       game.board[10] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
       expect(game.canMove(0, 10), isTrue);
+
+      game.board[1] = ChessPiece(PieceColor.black, 4, '車', revealed: true);
+      expect(game.canMove(0, 1), isTrue);
+      game.board[1] = ChessPiece(PieceColor.black, 6, '士', revealed: true);
+      expect(game.canMove(0, 1), isFalse);
     });
 
     test('rook travels and captures in a clear straight line', () {

@@ -287,12 +287,13 @@ class DarkChessModel {
       return false;
     }
 
-    if (superPiece && moving.rank == 7 && target != null && target.rank == 1) {
-      return _screensBetween(from, to, straightOnly: true) == 1;
+    if (superPiece && moving.rank == 7 && target != null) {
+      if (_screensBetween(from, to, straightOnly: true) == 1) return true;
     }
     if (superPiece && moving.rank == 5 && target != null) {
-      if ((fr - tr).abs() != (fc - tc).abs()) return false;
-      return _screensBetween(from, to) == 1;
+      if ((fr - tr).abs() == (fc - tc).abs()) {
+        return _screensBetween(from, to) == 1;
+      }
     }
     if (superPiece && moving.rank == 4) {
       if (fr != tr && fc != tc) return false;
