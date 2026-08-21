@@ -50,6 +50,27 @@ void main() {
     expect(client.turnColor, host.turnColor);
   });
 
+  test('captured pieces are recorded and synchronized', () {
+    final host = DarkChessModel(mode: GameMode.twoPlayers, random: Random(9));
+    host.board.fillRange(0, 32, null);
+    host.board[0] = ChessPiece(PieceColor.red, 4, '俥', revealed: true);
+    host.board[1] = ChessPiece(PieceColor.black, 3, '馬', revealed: true);
+    host.board[2] = ChessPiece(PieceColor.black, 1, '卒', revealed: true);
+    host.turnColor = PieceColor.red;
+    host.selected = 0;
+    host.tap(1);
+
+    expect(host.capturedPieces.single.label, '馬');
+    expect(host.capturedPieces.single.revealed, isTrue);
+
+    final client = DarkChessModel(
+      mode: GameMode.twoPlayers,
+      random: Random(10),
+    );
+    client.applyNetworkMap(host.toNetworkMap());
+    expect(client.capturedPieces.single.label, '馬');
+  });
+
   test('computer avoids a valuable capture that is immediately lost', () {
     final game = DarkChessModel(mode: GameMode.computer, random: Random(8));
     game.board.fillRange(0, 32, null);

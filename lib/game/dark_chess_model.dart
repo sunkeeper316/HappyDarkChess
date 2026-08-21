@@ -50,6 +50,7 @@ class DarkChessModel {
   int blackSuperRank;
   final Random _random;
   final List<ChessPiece?> board = List.filled(32, null);
+  final List<ChessPiece> capturedPieces = [];
   final ValueNotifier<GameSnapshot> snapshot = ValueNotifier(
     const GameSnapshot(message: '紅黑未定，請翻開一枚棋子', redCount: 16, blackCount: 16),
   );
@@ -82,6 +83,16 @@ class DarkChessModel {
                 },
         )
         .toList(),
+    'capturedPieces': capturedPieces
+        .map(
+          (piece) => {
+            'color': piece.color.name,
+            'rank': piece.rank,
+            'label': piece.label,
+            'revealed': true,
+          },
+        )
+        .toList(),
     'playerOneColor': playerOneColor?.name,
     'turnColor': turnColor?.name,
     'selected': selected,
@@ -109,6 +120,19 @@ class DarkChessModel {
         );
       }
     }
+    capturedPieces
+      ..clear()
+      ..addAll(
+        (data['capturedPieces'] as List<dynamic>? ?? const []).map((value) {
+          final map = value as Map<String, dynamic>;
+          return ChessPiece(
+            PieceColor.values.byName(map['color'] as String),
+            map['rank'] as int,
+            map['label'] as String,
+            revealed: true,
+          );
+        }),
+      );
     final playerColor = data['playerOneColor'] as String?;
     final currentTurn = data['turnColor'] as String?;
     playerOneColor = playerColor == null
@@ -136,6 +160,7 @@ class DarkChessModel {
     comboPiece = null;
     gameOver = false;
     aiThinking = false;
+    capturedPieces.clear();
     final pieces = <ChessPiece>[];
     void add(PieceColor color, int rank, String label, int count) {
       for (var i = 0; i < count; i++) {
@@ -277,7 +302,12 @@ class DarkChessModel {
 
   void _performMove(int from, int to) {
     final moving = board[from]!;
-    final captured = board[to] != null;
+    final capturedPiece = board[to];
+    final captured = capturedPiece != null;
+    if (capturedPiece != null) {
+      capturedPiece.revealed = true;
+      capturedPieces.add(capturedPiece);
+    }
     final isSecondComboCapture = comboPiece == from;
     board[to] = moving;
     board[from] = null;

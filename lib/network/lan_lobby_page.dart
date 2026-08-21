@@ -5,7 +5,15 @@ import '../game/dark_chess_model.dart';
 import 'lan_connection.dart';
 
 class LanLobbyPage extends StatefulWidget {
-  const LanLobbyPage({super.key});
+  const LanLobbyPage({
+    super.key,
+    this.ruleMode = RuleMode.classic,
+    this.redSuperRank = 7,
+    this.blackSuperRank = 7,
+  });
+  final RuleMode ruleMode;
+  final int redSuperRank;
+  final int blackSuperRank;
   @override
   State<LanLobbyPage> createState() => _LanLobbyPageState();
 }
@@ -32,7 +40,13 @@ class _LanLobbyPageState extends State<LanLobbyPage> {
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => LanGamePage.host(host, address: address),
+          builder: (_) => LanGamePage.host(
+            host,
+            address: address,
+            ruleMode: widget.ruleMode,
+            redSuperRank: widget.redSuperRank,
+            blackSuperRank: widget.blackSuperRank,
+          ),
         ),
       );
       await host.close();
@@ -147,17 +161,29 @@ class _LanLobbyPageState extends State<LanLobbyPage> {
 }
 
 class LanGamePage extends StatefulWidget {
-  const LanGamePage.host(this._host, {super.key, required this.address})
-    : _client = null,
-      isHost = true;
+  const LanGamePage.host(
+    this._host, {
+    super.key,
+    required this.address,
+    required this.ruleMode,
+    required this.redSuperRank,
+    required this.blackSuperRank,
+  }) : _client = null,
+       isHost = true;
   const LanGamePage.client(this._client, {super.key})
     : _host = null,
       address = null,
+      ruleMode = RuleMode.classic,
+      redSuperRank = 7,
+      blackSuperRank = 7,
       isHost = false;
   final LanHost? _host;
   final LanClient? _client;
   final bool isHost;
   final String? address;
+  final RuleMode ruleMode;
+  final int redSuperRank;
+  final int blackSuperRank;
   @override
   State<LanGamePage> createState() => _LanGamePageState();
 }
@@ -170,7 +196,12 @@ class _LanGamePageState extends State<LanGamePage> {
   @override
   void initState() {
     super.initState();
-    model = DarkChessModel(mode: GameMode.twoPlayers);
+    model = DarkChessModel(
+      mode: GameMode.twoPlayers,
+      ruleMode: widget.ruleMode,
+      redSuperRank: widget.redSuperRank,
+      blackSuperRank: widget.blackSuperRank,
+    );
     game = DarkChessGame(model, onCellTap: _tap);
     if (widget.isHost) {
       widget._host!.onConnectionChanged = (value) {
@@ -233,9 +264,9 @@ class _LanGamePageState extends State<LanGamePage> {
     body: SafeArea(
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
+          constraints: const BoxConstraints(maxWidth: 1200),
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(10),
             child: Column(
               children: [
                 if (widget.isHost && !connected)

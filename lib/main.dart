@@ -20,12 +20,237 @@ class HappyDarkChessApp extends StatelessWidget {
       scaffoldBackgroundColor: const Color(0xFF17110D),
       useMaterial3: true,
     ),
-    home: const GameScreen(),
+    home: const HomeScreen(),
+  );
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  RuleMode ruleMode = RuleMode.classic;
+  int redSuperRank = 7;
+  int blackSuperRank = 7;
+
+  void _start(GameMode mode) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => GameScreen(
+          mode: mode,
+          ruleMode: ruleMode,
+          redSuperRank: redSuperRank,
+          blackSuperRank: blackSuperRank,
+        ),
+      ),
+    );
+  }
+
+  void _startLan() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => LanLobbyPage(
+          ruleMode: ruleMode,
+          redSuperRank: redSuperRank,
+          blackSuperRank: blackSuperRank,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 620),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(
+                  Icons.casino_outlined,
+                  size: 72,
+                  color: Color(0xFFFFB36A),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  '歡樂暗棋',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900),
+                ),
+                const Text(
+                  '選擇對戰方式，開始新的一局',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Color(0xFFBEA99B), fontSize: 16),
+                ),
+                const SizedBox(height: 30),
+                _HomeBattleCard(
+                  icon: Icons.smart_toy_outlined,
+                  title: '電腦對戰',
+                  subtitle: '挑戰會預測下一手的戰術 AI',
+                  onTap: () => _start(GameMode.computer),
+                ),
+                const SizedBox(height: 12),
+                _HomeBattleCard(
+                  icon: Icons.people_outline,
+                  title: '本機雙人',
+                  subtitle: '兩位玩家在同一部裝置輪流對戰',
+                  onTap: () => _start(GameMode.twoPlayers),
+                ),
+                const SizedBox(height: 12),
+                _HomeBattleCard(
+                  icon: Icons.wifi,
+                  title: 'Wi-Fi 對戰',
+                  subtitle: '兩台裝置連接相同 Wi-Fi 進行對戰',
+                  onTap: _startLan,
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2A211C),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '本局規則',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SegmentedButton<RuleMode>(
+                        segments: const [
+                          ButtonSegment(
+                            value: RuleMode.classic,
+                            label: Text('經典暗棋'),
+                          ),
+                          ButtonSegment(
+                            value: RuleMode.superPieces,
+                            icon: Icon(Icons.bolt),
+                            label: Text('超級兵'),
+                          ),
+                        ],
+                        selected: {ruleMode},
+                        onSelectionChanged: (value) => setState(() {
+                          ruleMode = value.first;
+                        }),
+                      ),
+                      if (ruleMode == RuleMode.superPieces) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 18,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            _SuperPicker(
+                              colorName: '紅',
+                              value: redSuperRank,
+                              names: _GameScreenState._redNames,
+                              onChanged: (value) => setState(() {
+                                redSuperRank = value;
+                              }),
+                            ),
+                            _SuperPicker(
+                              colorName: '黑',
+                              value: blackSuperRank,
+                              names: _GameScreenState._blackNames,
+                              onChanged: (value) => setState(() {
+                                blackSuperRank = value;
+                              }),
+                            ),
+                            TextButton.icon(
+                              onPressed: () => showDialog<void>(
+                                context: context,
+                                builder: (_) => const _SuperPieceHelpDialog(),
+                              ),
+                              icon: const Icon(Icons.help_outline),
+                              label: const Text('能力說明'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _HomeBattleCard extends StatelessWidget {
+  const _HomeBattleCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Card(
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 17),
+        child: Row(
+          children: [
+            Icon(icon, size: 38, color: const Color(0xFFFFB36A)),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Color(0xFFCDBDB2)),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right),
+          ],
+        ),
+      ),
+    ),
   );
 }
 
 class GameScreen extends StatefulWidget {
-  const GameScreen({super.key});
+  const GameScreen({
+    super.key,
+    required this.mode,
+    required this.ruleMode,
+    required this.redSuperRank,
+    required this.blackSuperRank,
+  });
+  final GameMode mode;
+  final RuleMode ruleMode;
+  final int redSuperRank;
+  final int blackSuperRank;
   @override
   State<GameScreen> createState() => _GameScreenState();
 }
@@ -33,10 +258,6 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   late DarkChessModel model;
   late DarkChessGame game;
-  GameMode mode = GameMode.computer;
-  RuleMode ruleMode = RuleMode.classic;
-  int redSuperRank = 7;
-  int blackSuperRank = 7;
   static const _redNames = <int, String>{
     7: '帥',
     6: '仕',
@@ -63,10 +284,10 @@ class _GameScreenState extends State<GameScreen> {
 
   void _newGame() {
     model = DarkChessModel(
-      mode: mode,
-      ruleMode: ruleMode,
-      redSuperRank: redSuperRank,
-      blackSuperRank: blackSuperRank,
+      mode: widget.mode,
+      ruleMode: widget.ruleMode,
+      redSuperRank: widget.redSuperRank,
+      blackSuperRank: widget.blackSuperRank,
     );
     game = DarkChessGame(model);
   }
@@ -75,112 +296,35 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: Text(widget.mode == GameMode.computer ? '電腦對戰' : '本機雙人'),
+      actions: [
+        if (widget.ruleMode == RuleMode.superPieces)
+          IconButton(
+            tooltip: '超級兵能力說明',
+            onPressed: _showSuperPieceHelp,
+            icon: const Icon(Icons.bolt),
+          ),
+        IconButton(
+          tooltip: '重新開局',
+          onPressed: _restart,
+          icon: const Icon(Icons.refresh),
+        ),
+      ],
+    ),
     body: SafeArea(
       child: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 620),
+          constraints: const BoxConstraints(maxWidth: 1200),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 10, 18, 18),
+            padding: const EdgeInsets.fromLTRB(10, 6, 10, 10),
             child: Column(
               children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '歡樂暗棋',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          Text(
-                            '翻開未知，吃光對手',
-                            style: TextStyle(color: Color(0xFFBEA99B)),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SegmentedButton<GameMode>(
-                      segments: const [
-                        ButtonSegment(
-                          value: GameMode.computer,
-                          icon: Icon(Icons.smart_toy_outlined),
-                          label: Text('電腦'),
-                        ),
-                        ButtonSegment(
-                          value: GameMode.twoPlayers,
-                          icon: Icon(Icons.people_outline),
-                          label: Text('雙人'),
-                        ),
-                      ],
-                      selected: {mode},
-                      onSelectionChanged: (value) {
-                        mode = value.first;
-                        _restart();
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 6,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    SegmentedButton<RuleMode>(
-                      segments: const [
-                        ButtonSegment(
-                          value: RuleMode.classic,
-                          label: Text('經典'),
-                        ),
-                        ButtonSegment(
-                          value: RuleMode.superPieces,
-                          icon: Icon(Icons.bolt),
-                          label: Text('超級兵'),
-                        ),
-                      ],
-                      selected: {ruleMode},
-                      onSelectionChanged: (value) {
-                        ruleMode = value.first;
-                        _restart();
-                      },
-                    ),
-                    if (ruleMode == RuleMode.superPieces) ...[
-                      IconButton.outlined(
-                        tooltip: '超級兵能力說明',
-                        onPressed: _showSuperPieceHelp,
-                        icon: const Icon(Icons.help_outline),
-                      ),
-                      _SuperPicker(
-                        colorName: '紅',
-                        value: redSuperRank,
-                        names: _redNames,
-                        onChanged: (value) {
-                          redSuperRank = value;
-                          _restart();
-                        },
-                      ),
-                      _SuperPicker(
-                        colorName: '黑',
-                        value: blackSuperRank,
-                        names: _blackNames,
-                        onChanged: (value) {
-                          blackSuperRank = value;
-                          _restart();
-                        },
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 12),
                 ValueListenableBuilder<GameSnapshot>(
                   valueListenable: model.snapshot,
                   builder: (_, state, _) => _StatusCard(state: state),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 6),
                 Expanded(
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(22),
@@ -192,32 +336,12 @@ class _GameScreenState extends State<GameScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const LanLobbyPage()),
-                    ),
-                    icon: const Icon(Icons.wifi),
-                    label: const Text('Wi-Fi 連線對戰'),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        '點棋背翻棋；金框棋子擁有所選棋種的超級能力。',
-                        style: TextStyle(color: Color(0xFFCDBDB2)),
-                      ),
-                    ),
-                    FilledButton.tonalIcon(
-                      onPressed: _restart,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('重新開局'),
-                    ),
-                  ],
+                const SizedBox(height: 6),
+                Text(
+                  widget.ruleMode == RuleMode.superPieces
+                      ? '金框棋子擁有超級能力'
+                      : '點棋背翻棋；點己方棋子後再點目的地',
+                  style: const TextStyle(color: Color(0xFFCDBDB2)),
                 ),
               ],
             ),

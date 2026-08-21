@@ -38,7 +38,16 @@ class DarkChessGame extends FlameGame {
         end: Alignment.bottomRight,
       ).createShader(Offset.zero & Size(size.x, size.y));
     canvas.drawRect(Offset.zero & Size(size.x, size.y), bg);
-    cellSize = _min(size.x / 4, size.y / 8);
+    // Keep generous captured-piece trays on phones, while allowing the board
+    // to use more of the extra width available on tablets and desktops.
+    final widthDivisor = size.x < 360
+        ? 6.0
+        : size.x < 600
+        ? 5.6
+        : size.x < 900
+        ? 5.0
+        : 4.7;
+    cellSize = _min(size.x / widthDivisor, size.y / 8);
     final width = cellSize * 4, height = cellSize * 8;
     boardRect = Rect.fromLTWH(
       (size.x - width) / 2,
@@ -64,6 +73,71 @@ class DarkChessGame extends FlameGame {
       );
       canvas.drawRect(cell.deflate(2), linePaint);
       _drawPiece(canvas, i, cell.center, cellSize * .39);
+    }
+    _drawCapturedPieces(canvas, PieceColor.red);
+    _drawCapturedPieces(canvas, PieceColor.black);
+  }
+
+  void _drawCapturedPieces(Canvas canvas, PieceColor color) {
+    final pieces = model.capturedPieces
+        .where((piece) => piece.color == color)
+        .toList();
+    final sideCenterX = color == PieceColor.red
+        ? boardRect.left / 2
+        : boardRect.right + (size.x - boardRect.right) / 2;
+    final availableWidth = color == PieceColor.red
+        ? boardRect.left
+        : size.x - boardRect.right;
+    final radius = _min(cellSize * .17, (availableWidth - 8) / 4);
+    if (radius < 6) return;
+
+    _text(
+      canvas,
+      color == PieceColor.red ? '紅被吃' : '黑被吃',
+      Offset(sideCenterX, boardRect.top + radius),
+      radius * .72,
+      color == PieceColor.red
+          ? const Color(0xFFFF756B)
+          : const Color(0xFFE0E0E0),
+    );
+    final startY = boardRect.top + cellSize * .72;
+    final rowStep = (boardRect.height - cellSize * .8) / 8;
+    for (var i = 0; i < pieces.length; i++) {
+      final row = i ~/ 2;
+      final col = i % 2;
+      final center = Offset(
+        sideCenterX + (col == 0 ? -radius * 1.12 : radius * 1.12),
+        startY + row * rowStep,
+      );
+      canvas.drawCircle(
+        center + const Offset(1, 2),
+        radius,
+        Paint()..color = const Color(0x55000000),
+      );
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()..color = const Color(0xFFFFE5B0),
+      );
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..color = model.isSuper(pieces[i])
+              ? const Color(0xFFFFD54F)
+              : const Color(0xFF8A552E)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      _text(
+        canvas,
+        pieces[i].label,
+        center,
+        radius * 1.05,
+        color == PieceColor.red
+            ? const Color(0xFFC62828)
+            : const Color(0xFF202020),
+      );
     }
   }
 
