@@ -49,4 +49,104 @@ void main() {
     expect(client.playerOneColor, host.playerOneColor);
     expect(client.turnColor, host.turnColor);
   });
+
+  test('computer avoids a valuable capture that is immediately lost', () {
+    final game = DarkChessModel(mode: GameMode.computer, random: Random(8));
+    game.board.fillRange(0, 32, null);
+    game.playerOneColor = PieceColor.black;
+    game.turnColor = PieceColor.red;
+    game.board[0] = ChessPiece(PieceColor.red, 7, '帥', revealed: true);
+    game.board[1] = ChessPiece(PieceColor.black, 4, '車', revealed: true);
+    game.board[2] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
+    game.board[28] = ChessPiece(PieceColor.red, 3, '傌', revealed: true);
+    game.board[29] = ChessPiece(PieceColor.black, 1, '卒', revealed: true);
+
+    game.playComputerTurn();
+
+    expect(game.board[29]!.label, '傌');
+    expect(game.board[0]!.label, '帥');
+  });
+
+  group('super piece mode', () {
+    DarkChessModel superGame(int rank) {
+      final game = DarkChessModel(
+        mode: GameMode.twoPlayers,
+        ruleMode: RuleMode.superPieces,
+        redSuperRank: rank,
+        blackSuperRank: rank,
+        random: Random(7),
+      );
+      game.board.fillRange(0, 32, null);
+      game.turnColor = PieceColor.red;
+      return game;
+    }
+
+    test('general cannon-jumps to capture a soldier', () {
+      final game = superGame(7);
+      game.board[0] = ChessPiece(PieceColor.red, 7, '帥', revealed: true);
+      game.board[1] = ChessPiece(PieceColor.red, 3, '傌', revealed: true);
+      game.board[3] = ChessPiece(PieceColor.black, 1, '卒', revealed: true);
+      expect(game.canMove(0, 3), isTrue);
+    });
+
+    test('advisor captures twice with the same piece', () {
+      final game = superGame(6);
+      game.board[5] = ChessPiece(PieceColor.red, 6, '仕', revealed: true);
+      game.board[6] = ChessPiece(PieceColor.black, 1, '卒', revealed: true);
+      game.board[7] = ChessPiece(PieceColor.black, 2, '包', revealed: true);
+      game.selected = 5;
+      game.tap(6);
+      expect(game.comboPiece, 6);
+      expect(game.turnColor, PieceColor.red);
+      game.tap(7);
+      expect(game.comboPiece, isNull);
+      expect(game.board[7]!.label, '仕');
+    });
+
+    test('elephant cannon-jumps diagonally', () {
+      final game = superGame(5);
+      game.board[0] = ChessPiece(PieceColor.red, 5, '相', revealed: true);
+      game.board[5] = ChessPiece(PieceColor.red, 1, '兵');
+      game.board[10] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
+      expect(game.canMove(0, 10), isTrue);
+    });
+
+    test('rook travels freely and cannon-jumps for captures', () {
+      final game = superGame(4);
+      game.board[0] = ChessPiece(PieceColor.red, 4, '俥', revealed: true);
+      expect(game.canMove(0, 12), isTrue);
+      game.board[12] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
+      expect(game.canMove(0, 12), isTrue);
+      game.board[4] = ChessPiece(PieceColor.red, 1, '兵');
+      expect(game.canMove(0, 12), isTrue);
+    });
+
+    test('horse moves diagonally but cannot capture a general', () {
+      final game = superGame(3);
+      game.board[0] = ChessPiece(PieceColor.red, 3, '傌', revealed: true);
+      game.board[5] = ChessPiece(PieceColor.black, 4, '車', revealed: true);
+      expect(game.canMove(0, 5), isTrue);
+      game.board[5] = ChessPiece(PieceColor.black, 7, '將', revealed: true);
+      expect(game.canMove(0, 5), isFalse);
+    });
+
+    test('cannon destroys face-down pieces until a revealed blocker', () {
+      final game = superGame(2);
+      game.board[0] = ChessPiece(PieceColor.red, 2, '炮', revealed: true);
+      game.board[1] = ChessPiece(PieceColor.black, 1, '卒');
+      game.board[3] = ChessPiece(PieceColor.red, 5, '相');
+      expect(game.canMove(0, 3), isTrue);
+      game.board[2] = ChessPiece(PieceColor.black, 3, '馬', revealed: true);
+      expect(game.canMove(0, 3), isFalse);
+    });
+
+    test('soldier captures every rank except advisor', () {
+      final game = superGame(1);
+      game.board[0] = ChessPiece(PieceColor.red, 1, '兵', revealed: true);
+      game.board[1] = ChessPiece(PieceColor.black, 5, '象', revealed: true);
+      expect(game.canMove(0, 1), isTrue);
+      game.board[1] = ChessPiece(PieceColor.black, 6, '士', revealed: true);
+      expect(game.canMove(0, 1), isFalse);
+    });
+  });
 }

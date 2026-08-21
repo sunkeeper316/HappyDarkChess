@@ -100,6 +100,23 @@ class DarkChessGame extends FlameGame {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 3,
     );
+    if (piece.revealed && model.isSuper(piece)) {
+      canvas.drawCircle(
+        center,
+        radius + 3,
+        Paint()
+          ..color = const Color(0xFFFFD54F)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
+      _text(
+        canvas,
+        '⚡',
+        center + Offset(radius * .62, -radius * .62),
+        radius * .48,
+        const Color(0xFFFFD54F),
+      );
+    }
     if (!piece.revealed) {
       canvas.drawCircle(
         center,

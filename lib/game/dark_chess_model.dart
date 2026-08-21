@@ -5,6 +5,8 @@ enum PieceColor { red, black }
 
 enum GameMode { computer, twoPlayers }
 
+enum RuleMode { classic, superPieces }
+
 class ChessPiece {
   ChessPiece(this.color, this.rank, this.label, {this.revealed = false});
   final PieceColor color;
@@ -33,11 +35,19 @@ class GameSnapshot {
 }
 
 class DarkChessModel {
-  DarkChessModel({required this.mode, Random? random})
-    : _random = random ?? Random() {
+  DarkChessModel({
+    required this.mode,
+    this.ruleMode = RuleMode.classic,
+    this.redSuperRank = 7,
+    this.blackSuperRank = 7,
+    Random? random,
+  }) : _random = random ?? Random() {
     reset();
   }
   final GameMode mode;
+  RuleMode ruleMode;
+  int redSuperRank;
+  int blackSuperRank;
   final Random _random;
   final List<ChessPiece?> board = List.filled(32, null);
   final ValueNotifier<GameSnapshot> snapshot = ValueNotifier(
@@ -48,10 +58,16 @@ class DarkChessModel {
   int? selected;
   bool gameOver = false;
   bool aiThinking = false;
+  int? comboPiece;
   bool get isComputerTurn =>
       mode == GameMode.computer &&
       turnColor != null &&
       turnColor != playerOneColor;
+
+  bool isSuper(ChessPiece piece) =>
+      ruleMode == RuleMode.superPieces &&
+      piece.rank ==
+          (piece.color == PieceColor.red ? redSuperRank : blackSuperRank);
 
   Map<String, dynamic> toNetworkMap() => {
     'board': board
@@ -70,6 +86,10 @@ class DarkChessModel {
     'turnColor': turnColor?.name,
     'selected': selected,
     'gameOver': gameOver,
+    'ruleMode': ruleMode.name,
+    'redSuperRank': redSuperRank,
+    'blackSuperRank': blackSuperRank,
+    'comboPiece': comboPiece,
     'message': snapshot.value.message,
   };
 
@@ -99,10 +119,23 @@ class DarkChessModel {
         : PieceColor.values.byName(currentTurn);
     selected = data['selected'] as int?;
     gameOver = data['gameOver'] as bool;
+    final networkRuleMode = data['ruleMode'] as String?;
+    if (networkRuleMode != null) {
+      ruleMode = RuleMode.values.byName(networkRuleMode);
+    }
+    redSuperRank = data['redSuperRank'] as int? ?? redSuperRank;
+    blackSuperRank = data['blackSuperRank'] as int? ?? blackSuperRank;
+    comboPiece = data['comboPiece'] as int?;
     _publish(data['message'] as String);
   }
 
   void reset() {
+    playerOneColor = null;
+    turnColor = null;
+    selected = null;
+    comboPiece = null;
+    gameOver = false;
+    aiThinking = false;
     final pieces = <ChessPiece>[];
     void add(PieceColor color, int rank, String label, int count) {
       for (var i = 0; i < count; i++) {
@@ -134,6 +167,17 @@ class DarkChessModel {
   bool tap(int index) {
     if (gameOver || aiThinking || isComputerTurn) return false;
     final piece = board[index];
+    if (comboPiece != null) {
+      if (selected == comboPiece &&
+          board[index] != null &&
+          canMove(comboPiece!, index)) {
+        _performMove(comboPiece!, index);
+        return true;
+      }
+      selected = comboPiece;
+      _publish('${_colorName(turnColor)}方：仕／士可再吃一枚棋子');
+      return true;
+    }
     if (piece != null && !piece.revealed) {
       piece.revealed = true;
       turnColor ??= piece.color;
@@ -143,10 +187,7 @@ class DarkChessModel {
       return true;
     }
     if (selected != null && canMove(selected!, index)) {
-      board[index] = board[selected!];
-      board[selected!] = null;
-      selected = null;
-      _finishTurn();
+      _performMove(selected!, index);
       return true;
     }
     if (piece != null && piece.revealed && piece.color == turnColor) {
@@ -166,30 +207,100 @@ class DarkChessModel {
     if (moving == null || !moving.revealed || moving.color != turnColor) {
       return false;
     }
+    final fr = from ~/ 4, fc = from % 4, tr = to ~/ 4, tc = to % 4;
+    final distance = (fr - tr).abs() + (fc - tc).abs();
+    final superPiece = isSuper(moving);
+
+    // Super cannon may destroy any face-down piece before the first revealed
+    // blocker, including one of its own colour.
+    if (superPiece && moving.rank == 2 && target != null && !target.revealed) {
+      if (fr != tr && fc != tc) return false;
+      for (final index in _between(from, to)) {
+        final screen = board[index];
+        if (screen != null && screen.revealed) return false;
+      }
+      return true;
+    }
     if (target != null && (!target.revealed || target.color == moving.color)) {
       return false;
     }
-    final fr = from ~/ 4, fc = from % 4, tr = to ~/ 4, tc = to % 4;
-    final distance = (fr - tr).abs() + (fc - tc).abs();
+
+    if (superPiece && moving.rank == 7 && target != null && target.rank == 1) {
+      return _screensBetween(from, to, straightOnly: true) == 1;
+    }
+    if (superPiece && moving.rank == 5 && target != null) {
+      if ((fr - tr).abs() != (fc - tc).abs()) return false;
+      return _screensBetween(from, to) == 1;
+    }
+    if (superPiece && moving.rank == 4) {
+      if (fr != tr && fc != tc) return false;
+      final screens = _screensBetween(from, to, straightOnly: true);
+      return target == null ? screens == 0 : screens <= 1;
+    }
+    if (superPiece &&
+        moving.rank == 3 &&
+        (fr - tr).abs() == 1 &&
+        (fc - tc).abs() == 1) {
+      return target == null || target.rank != 7;
+    }
     if (moving.rank == 2 && target != null) {
       if (fr != tr && fc != tc) return false;
-      var screens = 0;
-      if (fr == tr) {
-        for (var c = min(fc, tc) + 1; c < max(fc, tc); c++) {
-          if (board[fr * 4 + c] != null) screens++;
-        }
-      } else {
-        for (var r = min(fr, tr) + 1; r < max(fr, tr); r++) {
-          if (board[r * 4 + fc] != null) screens++;
-        }
-      }
-      return screens == 1;
+      return _screensBetween(from, to, straightOnly: true) == 1;
     }
     if (distance != 1) return false;
     if (target == null) return true;
+    if (superPiece && moving.rank == 1) return target.rank != 6;
     if (moving.rank == 1 && target.rank == 7) return true;
     if (moving.rank == 7 && target.rank == 1) return false;
     return moving.rank >= target.rank;
+  }
+
+  Iterable<int> _between(int from, int to) sync* {
+    final fr = from ~/ 4, fc = from % 4, tr = to ~/ 4, tc = to % 4;
+    final dr = tr == fr ? 0 : (tr > fr ? 1 : -1);
+    final dc = tc == fc ? 0 : (tc > fc ? 1 : -1);
+    var r = fr + dr, c = fc + dc;
+    while (r != tr || c != tc) {
+      yield r * 4 + c;
+      r += dr;
+      c += dc;
+    }
+  }
+
+  int _screensBetween(int from, int to, {bool straightOnly = false}) {
+    final fr = from ~/ 4, fc = from % 4, tr = to ~/ 4, tc = to % 4;
+    final straight = fr == tr || fc == tc;
+    final diagonal = (fr - tr).abs() == (fc - tc).abs();
+    if ((!straight && straightOnly) || (!straight && !diagonal)) return -1;
+    return _between(from, to).where((index) => board[index] != null).length;
+  }
+
+  void _performMove(int from, int to) {
+    final moving = board[from]!;
+    final captured = board[to] != null;
+    final isSecondComboCapture = comboPiece == from;
+    board[to] = moving;
+    board[from] = null;
+    selected = null;
+    comboPiece = null;
+    if (!isSecondComboCapture &&
+        captured &&
+        isSuper(moving) &&
+        moving.rank == 6) {
+      final oldTurn = turnColor;
+      turnColor = moving.color;
+      final hasSecondCapture = legalMoves(
+        moving.color,
+      ).any((move) => move.from == to && board[move.to] != null);
+      turnColor = oldTurn;
+      if (hasSecondCapture) {
+        comboPiece = to;
+        selected = to;
+        _publish('${_colorName(turnColor)}方：仕／士可再吃一枚棋子');
+        return;
+      }
+    }
+    _finishTurn();
   }
 
   List<BoardMove> legalMoves(PieceColor color) {
@@ -211,21 +322,129 @@ class DarkChessModel {
       for (var i = 0; i < 32; i++)
         if (board[i] != null && !board[i]!.revealed) i,
     ];
-    final moves = legalMoves(turnColor!);
+    var moves = legalMoves(turnColor!);
+    if (comboPiece != null) {
+      moves = moves
+          .where((move) => move.from == comboPiece && board[move.to] != null)
+          .toList();
+    }
     final captures = moves.where((m) => board[m.to] != null).toList();
     if (captures.isNotEmpty) {
-      captures.sort((a, b) => board[b.to]!.rank.compareTo(board[a.to]!.rank));
-      final move = captures.first;
-      board[move.to] = board[move.from];
-      board[move.from] = null;
-    } else if (hidden.isNotEmpty && (_random.nextBool() || moves.isEmpty)) {
-      board[hidden[_random.nextInt(hidden.length)]]!.revealed = true;
+      final move = _bestComputerMove(captures);
+      _performMove(move.from, move.to);
+      if (comboPiece != null) playComputerTurn();
+      return;
+    } else if (hidden.isNotEmpty &&
+        (moves.isEmpty || _random.nextInt(100) < 35)) {
+      board[_bestFlip(hidden)]!.revealed = true;
     } else if (moves.isNotEmpty) {
-      final move = moves[_random.nextInt(moves.length)];
-      board[move.to] = board[move.from];
-      board[move.from] = null;
+      final move = _bestComputerMove(moves);
+      _performMove(move.from, move.to);
+      return;
     }
     _finishTurn();
+  }
+
+  BoardMove _bestComputerMove(List<BoardMove> moves) {
+    var bestScore = -1 << 30;
+    final best = <BoardMove>[];
+    for (final move in moves) {
+      final score = _scoreComputerMove(move);
+      if (score > bestScore) {
+        bestScore = score;
+        best
+          ..clear()
+          ..add(move);
+      } else if (score == bestScore) {
+        best.add(move);
+      }
+    }
+    return best[_random.nextInt(best.length)];
+  }
+
+  int _scoreComputerMove(BoardMove move) {
+    final moving = board[move.from]!;
+    final target = board[move.to];
+    var score = target == null
+        ? 0
+        : _pieceValue(target, hiddenFairly: true) * 12;
+    if (target != null && isSuper(moving) && moving.rank == 6) score += 90;
+
+    // Temporarily play the move, then inspect the opponent's best immediate
+    // reply. Hidden identities are deliberately not used by this evaluation.
+    board[move.to] = moving;
+    board[move.from] = null;
+    final oldTurn = turnColor;
+    turnColor = moving.color == PieceColor.red
+        ? PieceColor.black
+        : PieceColor.red;
+    final replies = legalMoves(turnColor!);
+    var worstReply = 0;
+    var movedPieceThreatened = false;
+    for (final reply in replies) {
+      final captured = board[reply.to];
+      if (captured == null) continue;
+      final loss = _pieceValue(captured, hiddenFairly: true) * 10;
+      if (loss > worstReply) worstReply = loss;
+      if (reply.to == move.to) movedPieceThreatened = true;
+    }
+    score -= worstReply;
+    if (movedPieceThreatened) score -= _pieceValue(moving) * 3;
+
+    // Prefer useful central squares and positions with more future choices.
+    final row = move.to ~/ 4;
+    final col = move.to % 4;
+    if (col == 1 || col == 2) score += 5;
+    if (row > 0 && row < 7) score += 2;
+    score += legalMoves(moving.color).where((m) => m.from == move.to).length;
+
+    turnColor = oldTurn;
+    board[move.from] = moving;
+    board[move.to] = target;
+    return score;
+  }
+
+  int _bestFlip(List<int> hidden) {
+    var bestScore = -1 << 30;
+    final best = <int>[];
+    for (final index in hidden) {
+      var score = 0;
+      final row = index ~/ 4;
+      final col = index % 4;
+      for (final delta in const [(-1, 0), (1, 0), (0, -1), (0, 1)]) {
+        final r = row + delta.$1;
+        final c = col + delta.$2;
+        if (r < 0 || r >= 8 || c < 0 || c >= 4) continue;
+        final neighbour = board[r * 4 + c];
+        if (neighbour == null || !neighbour.revealed) continue;
+        score += neighbour.color == turnColor ? 4 : -6;
+      }
+      if (col == 1 || col == 2) score += 1;
+      if (score > bestScore) {
+        bestScore = score;
+        best
+          ..clear()
+          ..add(index);
+      } else if (score == bestScore) {
+        best.add(index);
+      }
+    }
+    return best[_random.nextInt(best.length)];
+  }
+
+  int _pieceValue(ChessPiece piece, {bool hiddenFairly = false}) {
+    if (!piece.revealed && hiddenFairly) return 4;
+    var value = switch (piece.rank) {
+      7 => 9,
+      6 => 7,
+      5 => 6,
+      4 => 6,
+      3 => 5,
+      2 => 6,
+      _ => 3,
+    };
+    if (isSuper(piece)) value += 4;
+    return value;
   }
 
   void _finishTurn() {

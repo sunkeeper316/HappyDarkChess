@@ -34,6 +34,27 @@ class _GameScreenState extends State<GameScreen> {
   late DarkChessModel model;
   late DarkChessGame game;
   GameMode mode = GameMode.computer;
+  RuleMode ruleMode = RuleMode.classic;
+  int redSuperRank = 7;
+  int blackSuperRank = 7;
+  static const _redNames = <int, String>{
+    7: '帥',
+    6: '仕',
+    5: '相',
+    4: '俥',
+    3: '傌',
+    2: '炮',
+    1: '兵',
+  };
+  static const _blackNames = <int, String>{
+    7: '將',
+    6: '士',
+    5: '象',
+    4: '車',
+    3: '馬',
+    2: '包',
+    1: '卒',
+  };
   @override
   void initState() {
     super.initState();
@@ -41,7 +62,12 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   void _newGame() {
-    model = DarkChessModel(mode: mode);
+    model = DarkChessModel(
+      mode: mode,
+      ruleMode: ruleMode,
+      redSuperRank: redSuperRank,
+      blackSuperRank: blackSuperRank,
+    );
     game = DarkChessGame(model);
   }
 
@@ -99,6 +125,57 @@ class _GameScreenState extends State<GameScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    SegmentedButton<RuleMode>(
+                      segments: const [
+                        ButtonSegment(
+                          value: RuleMode.classic,
+                          label: Text('經典'),
+                        ),
+                        ButtonSegment(
+                          value: RuleMode.superPieces,
+                          icon: Icon(Icons.bolt),
+                          label: Text('超級兵'),
+                        ),
+                      ],
+                      selected: {ruleMode},
+                      onSelectionChanged: (value) {
+                        ruleMode = value.first;
+                        _restart();
+                      },
+                    ),
+                    if (ruleMode == RuleMode.superPieces) ...[
+                      IconButton.outlined(
+                        tooltip: '超級兵能力說明',
+                        onPressed: _showSuperPieceHelp,
+                        icon: const Icon(Icons.help_outline),
+                      ),
+                      _SuperPicker(
+                        colorName: '紅',
+                        value: redSuperRank,
+                        names: _redNames,
+                        onChanged: (value) {
+                          redSuperRank = value;
+                          _restart();
+                        },
+                      ),
+                      _SuperPicker(
+                        colorName: '黑',
+                        value: blackSuperRank,
+                        names: _blackNames,
+                        onChanged: (value) {
+                          blackSuperRank = value;
+                          _restart();
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 12),
                 ValueListenableBuilder<GameSnapshot>(
                   valueListenable: model.snapshot,
                   builder: (_, state, _) => _StatusCard(state: state),
@@ -131,7 +208,7 @@ class _GameScreenState extends State<GameScreen> {
                   children: [
                     const Expanded(
                       child: Text(
-                        '點棋背翻棋；點己方棋子後，再點目的地。',
+                        '點棋背翻棋；金框棋子擁有所選棋種的超級能力。',
                         style: TextStyle(color: Color(0xFFCDBDB2)),
                       ),
                     ),
@@ -148,6 +225,107 @@ class _GameScreenState extends State<GameScreen> {
         ),
       ),
     ),
+  );
+
+  void _showSuperPieceHelp() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => const _SuperPieceHelpDialog(),
+    );
+  }
+}
+
+class _SuperPieceHelpDialog extends StatelessWidget {
+  const _SuperPieceHelpDialog();
+
+  static const _abilities = <(String, String)>[
+    ('帥／將', '獲得炮的跳吃能力；直線隔一枚棋子時，可以吃兵／卒。'),
+    ('仕／士', '第一次吃子後，同一枚仕／士可以立刻再吃一枚；若沒有可吃的目標就換手。'),
+    ('相／象', '成為斜線炮，可以沿斜線隔一枚棋子吃任意敵方明棋。'),
+    ('俥／車', '像象棋的車一樣沿直線任意移動或吃子；隔一枚棋子也能吃任意敵方明棋。'),
+    ('傌／馬', '可以斜走一格，也能吃帥／將以外的任意敵方明棋。'),
+    ('炮／包', '可以沿直線吃暗棋，不分敵我；暗棋不會阻擋路徑，但遇到明棋就不能繼續。'),
+    ('兵／卒', '可以吃仕／士以外的任何敵方明棋，但仍能被其他棋子正常吃掉。'),
+  ];
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    icon: const Icon(Icons.bolt, color: Color(0xFFFFD54F)),
+    title: const Text('超級兵能力說明'),
+    content: SizedBox(
+      width: 460,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '紅黑雙方各選一種棋種，該方所有同類棋子都會獲得超級能力。翻開後會顯示金色外框與閃電標記。',
+              style: TextStyle(color: Color(0xFFD2BEB0)),
+            ),
+            const SizedBox(height: 16),
+            for (final ability in _abilities)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 62,
+                      child: Text(
+                        ability.$1,
+                        style: const TextStyle(
+                          color: Color(0xFFFFD54F),
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text(ability.$2)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    ),
+    actions: [
+      FilledButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('知道了'),
+      ),
+    ],
+  );
+}
+
+class _SuperPicker extends StatelessWidget {
+  const _SuperPicker({
+    required this.colorName,
+    required this.value,
+    required this.names,
+    required this.onChanged,
+  });
+  final String colorName;
+  final int value;
+  final Map<int, String> names;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) => DropdownButton<int>(
+    value: value,
+    underline: const SizedBox.shrink(),
+    borderRadius: BorderRadius.circular(14),
+    items: names.entries
+        .map(
+          (entry) => DropdownMenuItem(
+            value: entry.key,
+            child: Text('$colorName：${entry.value}'),
+          ),
+        )
+        .toList(),
+    onChanged: (newValue) {
+      if (newValue != null) onChanged(newValue);
+    },
   );
 }
 
