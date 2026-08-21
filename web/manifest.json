@@ -1,11 +1,11 @@
 {
-    "name": "happy_dark_chess",
-    "short_name": "happy_dark_chess",
+    "name": "超級暗棋",
+    "short_name": "超級暗棋",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "支援經典與超級兵模式的台灣暗棋遊戲。",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

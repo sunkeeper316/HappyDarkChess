@@ -16,7 +16,7 @@ class HappyDarkChessApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) => MaterialApp(
     debugShowCheckedModeBanner: false,
-    title: '歡樂暗棋',
+    title: '超級暗棋',
     theme: ThemeData(
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFFB83227),
@@ -99,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  '歡樂暗棋',
+                  '超級暗棋',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900),
                 ),

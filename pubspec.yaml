@@ -1,5 +1,5 @@
 name: happy_dark_chess
-description: "A new Flutter project."
+description: "超級暗棋：支援經典與超級兵模式的台灣暗棋遊戲。"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
